@@ -1,10 +1,15 @@
 // -----------------------------
-// Dynamic Quote Generator with Server Sync, Conflict Handling, and Alerts
+// Dynamic Quote Generator (Full Version)
+// Includes Local Storage, Session Storage, Category Filtering,
+// Server Sync, Conflict Handling, Alerts, and JSON Import/Export
 // -----------------------------
 
 let quotes = [];
 const quoteDisplay = document.getElementById("quoteDisplay");
 const newQuoteBtn = document.getElementById("newQuote");
+const exportBtn = document.getElementById("exportQuotes");
+const importInput = document.getElementById("importQuotes");
+
 let syncInterval = null;
 let lastSyncTime = null;
 
@@ -145,6 +150,46 @@ function createAddQuoteForm() {
 }
 
 // -----------------------------
+// JSON Import/Export
+// -----------------------------
+function exportQuotes() {
+  const jsonData = JSON.stringify(quotes, null, 2);
+  const blob = new Blob([jsonData], { type: "application/json" }); // ✅ Blob used here
+  const url = URL.createObjectURL(blob);
+  
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "quotes.json";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importQuotes(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const importedQuotes = JSON.parse(e.target.result);
+      if (Array.isArray(importedQuotes)) {
+        quotes = [...quotes, ...importedQuotes];
+        saveQuotesToLocalStorage();
+        populateCategories();
+        showNotification("✅ Quotes imported successfully!");
+      } else {
+        showNotification("⚠️ Invalid JSON format.");
+      }
+    } catch {
+      showNotification("⚠️ Failed to import quotes.");
+    }
+  };
+  reader.readAsText(file);
+}
+
+// -----------------------------
 // Server Simulation
 // -----------------------------
 async function fetchQuotesFromServer() {
@@ -192,7 +237,6 @@ async function syncQuotes() {
   serverQuotes.forEach(serverQuote => {
     const index = merged.findIndex(q => q.id === serverQuote.id);
     if (index >= 0) {
-      // Conflict detected: server version overwrites
       merged[index] = serverQuote;
       showNotification("⚠️ Conflict resolved: Server quote replaced local version.");
     } else {
@@ -206,7 +250,7 @@ async function syncQuotes() {
   lastSyncTime = new Date().toLocaleTimeString();
 
   showNotification(`✅ Quotes synced with server at ${lastSyncTime}`);
-  alert("Quotes synced with server!"); // ✅ Added per your request
+  alert("Quotes synced with server!"); // ✅ Added alert
 }
 
 // Periodic sync wrapper
@@ -249,6 +293,10 @@ function init() {
   syncBtn.style.marginLeft = "10px";
   syncBtn.addEventListener("click", syncQuotes);
   document.body.insertBefore(syncBtn, newQuoteBtn.nextSibling);
+
+  // JSON Export / Import
+  exportBtn.addEventListener("click", exportQuotes);
+  importInput.addEventListener("change", importQuotes);
 
   startPeriodicSync();
 }
