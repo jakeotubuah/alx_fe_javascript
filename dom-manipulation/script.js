@@ -1,5 +1,5 @@
 // -----------------------------
-// Dynamic Quote Generator with Server Sync
+// Dynamic Quote Generator with Server Sync and Conflict Resolution
 // -----------------------------
 
 let quotes = [];
@@ -137,11 +137,7 @@ function createAddQuoteForm() {
     const text = quoteInput.value.trim();
     const category = categoryInput.value.trim();
     if (text && category) {
-      const newQuote = {
-        id: Date.now(),
-        text,
-        category
-      };
+      const newQuote = { id: Date.now(), text, category };
       quotes.push(newQuote);
       saveQuotesToLocalStorage();
       populateCategories();
@@ -157,12 +153,11 @@ function createAddQuoteForm() {
 // Server Simulation
 // -----------------------------
 
-// Simulate fetching quotes from server (using JSONPlaceholder)
+// Fetch mock quotes from JSONPlaceholder
 async function fetchQuotesFromServer() {
   try {
     const response = await fetch("https://jsonplaceholder.typicode.com/posts?_limit=5");
     const data = await response.json();
-    // Simulate converting server data to quote format
     const serverQuotes = data.map(item => ({
       id: item.id,
       text: item.title,
@@ -175,7 +170,7 @@ async function fetchQuotesFromServer() {
   }
 }
 
-// Simulate posting a quote to the server
+// Simulate posting a quote to server
 async function simulatePostToServer(quote) {
   try {
     await fetch("https://jsonplaceholder.typicode.com/posts", {
@@ -193,22 +188,23 @@ async function simulatePostToServer(quote) {
 // Sync and Conflict Handling
 // -----------------------------
 
-async function syncWithServer() {
+async function syncQuotes() {
   const serverQuotes = await fetchQuotesFromServer();
-  if (serverQuotes.length === 0) return;
+  if (serverQuotes.length === 0) {
+    showNotification("⚠️ No data fetched from server. Using local data only.");
+    return;
+  }
 
-  // Conflict resolution: Server data takes precedence if IDs match
-  const localIds = quotes.map(q => q.id);
   const merged = [...quotes];
+  const localIds = quotes.map(q => q.id);
 
   serverQuotes.forEach(serverQuote => {
     const index = merged.findIndex(q => q.id === serverQuote.id);
     if (index >= 0) {
-      // Conflict detected -> overwrite local
+      // Conflict detected: server version overwrites
       merged[index] = serverQuote;
       showNotification("⚠️ Conflict resolved: Server quote replaced local version.");
     } else {
-      // New server quote -> add
       merged.push(serverQuote);
     }
   });
@@ -217,7 +213,13 @@ async function syncWithServer() {
   saveQuotesToLocalStorage();
   populateCategories();
   lastSyncTime = new Date().toLocaleTimeString();
-  showNotification(`✅ Data synced with server at ${lastSyncTime}`);
+  showNotification(`✅ Quotes synced with server at ${lastSyncTime}`);
+}
+
+// Periodic sync wrapper
+function startPeriodicSync() {
+  syncQuotes(); // Run once at start
+  syncInterval = setInterval(syncQuotes, 30000); // every 30 seconds
 }
 
 // -----------------------------
@@ -250,9 +252,15 @@ function init() {
   newQuoteBtn.addEventListener("click", showRandomQuote);
   showRandomQuote();
 
-  // Start server sync every 30 seconds
-  syncWithServer();
-  syncInterval = setInterval(syncWithServer, 30000);
+  // Add manual sync button
+  const syncBtn = document.createElement("button");
+  syncBtn.textContent = "Sync Now";
+  syncBtn.style.marginLeft = "10px";
+  syncBtn.addEventListener("click", syncQuotes);
+  document.body.insertBefore(syncBtn, newQuoteBtn.nextSibling);
+
+  // Start background syncing
+  startPeriodicSync();
 }
 
 init();
