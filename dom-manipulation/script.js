@@ -1,18 +1,16 @@
 // -----------------------------
-// Dynamic Quote Generator with Server Sync and Conflict Resolution
+// Dynamic Quote Generator with Server Sync, Conflict Handling, and Alerts
 // -----------------------------
 
 let quotes = [];
 const quoteDisplay = document.getElementById("quoteDisplay");
 const newQuoteBtn = document.getElementById("newQuote");
-
 let syncInterval = null;
 let lastSyncTime = null;
 
 // -----------------------------
 // Local & Session Storage
 // -----------------------------
-
 function saveQuotesToLocalStorage() {
   localStorage.setItem("quotes", JSON.stringify(quotes));
 }
@@ -34,7 +32,6 @@ function loadQuotesFromLocalStorage() {
 // -----------------------------
 // Category Management
 // -----------------------------
-
 function getUniqueCategories() {
   return [...new Set(quotes.map(q => q.category))];
 }
@@ -82,7 +79,6 @@ function populateCategories() {
 // -----------------------------
 // Quote Display & Filtering
 // -----------------------------
-
 function filterQuotes(category) {
   let filtered = category === "All" ? quotes : quotes.filter(q => q.category === category);
   if (filtered.length === 0) {
@@ -106,7 +102,6 @@ function showRandomQuote() {
 // -----------------------------
 // Add New Quote Form
 // -----------------------------
-
 function createAddQuoteForm() {
   const form = document.createElement("form");
   form.id = "addQuoteForm";
@@ -152,8 +147,6 @@ function createAddQuoteForm() {
 // -----------------------------
 // Server Simulation
 // -----------------------------
-
-// Fetch mock quotes from JSONPlaceholder
 async function fetchQuotesFromServer() {
   try {
     const response = await fetch("https://jsonplaceholder.typicode.com/posts?_limit=5");
@@ -170,7 +163,6 @@ async function fetchQuotesFromServer() {
   }
 }
 
-// Simulate posting a quote to server
 async function simulatePostToServer(quote) {
   try {
     await fetch("https://jsonplaceholder.typicode.com/posts", {
@@ -187,7 +179,6 @@ async function simulatePostToServer(quote) {
 // -----------------------------
 // Sync and Conflict Handling
 // -----------------------------
-
 async function syncQuotes() {
   const serverQuotes = await fetchQuotesFromServer();
   if (serverQuotes.length === 0) {
@@ -213,7 +204,9 @@ async function syncQuotes() {
   saveQuotesToLocalStorage();
   populateCategories();
   lastSyncTime = new Date().toLocaleTimeString();
+
   showNotification(`✅ Quotes synced with server at ${lastSyncTime}`);
+  alert("Quotes synced with server!"); // ✅ Added per your request
 }
 
 // Periodic sync wrapper
@@ -225,7 +218,6 @@ function startPeriodicSync() {
 // -----------------------------
 // Notifications
 // -----------------------------
-
 function showNotification(message) {
   let note = document.getElementById("notification");
   if (!note) {
@@ -244,7 +236,6 @@ function showNotification(message) {
 // -----------------------------
 // Initialization
 // -----------------------------
-
 function init() {
   loadQuotesFromLocalStorage();
   populateCategories();
@@ -252,14 +243,13 @@ function init() {
   newQuoteBtn.addEventListener("click", showRandomQuote);
   showRandomQuote();
 
-  // Add manual sync button
+  // Manual sync button
   const syncBtn = document.createElement("button");
   syncBtn.textContent = "Sync Now";
   syncBtn.style.marginLeft = "10px";
   syncBtn.addEventListener("click", syncQuotes);
   document.body.insertBefore(syncBtn, newQuoteBtn.nextSibling);
 
-  // Start background syncing
   startPeriodicSync();
 }
 
